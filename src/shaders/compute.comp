@@ -7,6 +7,7 @@ layout(local_size_x = WORKGROUP_SIZE, local_size_y = 1, local_size_z = 1) in;
 layout(set = 0, binding = 0) uniform CameraBufferObject {
     mat4 view;
     mat4 proj;
+    vec3 pos;
 } camera;
 
 layout(set = 1, binding = 0) uniform Time {
@@ -44,6 +45,10 @@ const float gravityValue = 4.8f;
 const float windSpeed = 30.f;
 const float windFieldScale = 0.02f;
 const float windFieldFrenquency = 0.25f;
+
+const float viewCullingTolerance = 0.01f;
+const int nBuckets = 8;
+const float maxDistance = 40.f;
 
 // Noise from iq: https://www.shadertoy.com/view/Msf3WH
 vec2 hash( vec2 p ) // replace this by something better
@@ -141,8 +146,32 @@ void main() {
     inBlades[gl_GlobalInvocationID.x].v1.xyz = v1;
     inBlades[gl_GlobalInvocationID.x].v2.xyz = v2;
 
-	// TODO: Cull blades that are too far away or not in the camera frustum and write them
+	// Cull blades that are too far away or not in the camera frustum and write them
 	// to the culled blades buffer
+    // Orientation culling
+    vec3 viewDir = normalize(camera.pos - v0);
+    if (abs(dot(viewDir, t1)) > 0.9) {
+        return;
+    }
+    // View-frustum culling
+    vec3 m = 0.25f * v0 + 0.5f * v1 + 0.25f * v2;
+    vec4 projV0 = camera.proj * camera.view * vec4(v0, 1.f); projV0 /= projV0.w;
+    vec4 projV2 = camera.proj * camera.view * vec4(v2, 1.f); projV2 /= projV2.w;
+    vec4 projM = camera.proj * camera.view * vec4(m, 1.f); projM /= projM.w;
+    bool v0Valid = inBounds(projV0.x, 1.f + viewCullingTolerance) && inBounds(projV0.y, 1.f + viewCullingTolerance);
+    bool v1Valid = inBounds(projV2.x, 1.f + viewCullingTolerance) && inBounds(projV2.y, 1.f + viewCullingTolerance);
+    bool mValid = inBounds(projM.x, 1.f + viewCullingTolerance) && inBounds(projM.y, 1.f + viewCullingTolerance);
+    if (!v0Valid && !v1Valid && !mValid) {
+        return;
+    }
+    // Distance culling
+    vec3 toVec = v0 - camera.pos;
+    float dproj = length(toVec - up * dot(toVec, up));
+    int threshold = int(floor(nBuckets * (dproj / maxDistance)));
+    if (gl_GlobalInvocationID.x - (gl_GlobalInvocationID.x / nBuckets) * nBuckets < threshold) {
+        return;
+    }
+
 	// Note: to do this, you will need to use an atomic operation to read and update numBlades.vertexCount
 	// You want to write the visible blades to the buffer without write conflicts between threads
     outBlades[atomicAdd(numBlades.vertexCount, 1)] = inBlades[gl_GlobalInvocationID.x];
