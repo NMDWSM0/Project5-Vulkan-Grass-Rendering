@@ -67,7 +67,7 @@ namespace {
 
 int main() {
     static constexpr char* applicationName = "Vulkan Grass Rendering";
-    InitializeWindow(640, 480, applicationName);
+    InitializeWindow(1600, 1200, applicationName);
 
     unsigned int glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -130,6 +130,8 @@ int main() {
     plane->SetTexture(grassImage);
     
     Blades* blades = new Blades(device, transferCommandPool, planeDim);
+    // placeholder, to be changed
+    blades->SetTexture(grassImage);
 
     vkDestroyCommandPool(device->GetVkDevice(), transferCommandPool, nullptr);
 

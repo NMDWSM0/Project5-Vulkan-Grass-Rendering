@@ -249,6 +249,18 @@ void Instance::PickPhysicalDevice(std::vector<const char*> deviceExtensions, Que
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
     // Evaluate each GPU and check if it is suitable
+    
+    auto score = [](VkPhysicalDevice dev)->int {
+        VkPhysicalDeviceProperties props{};
+        vkGetPhysicalDeviceProperties(dev, &props);
+        switch (props.deviceType) {
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:   return 3;
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return 2;
+        default:                                     return 1;
+        }
+        };
+    int best = -1;
+
     for (const auto& device : devices) {
         bool queueSupport = true;
         queueFamilyIndices = checkDeviceQueueSupport(device, requiredQueues, surface);
@@ -281,12 +293,14 @@ void Instance::PickPhysicalDevice(std::vector<const char*> deviceExtensions, Que
             }
         }
 
-        if (queueSupport &&
+        int sc = score(device);
+        if (sc > best && queueSupport &&
             checkDeviceExtensionSupport(device, deviceExtensions) &&
             (!requiredQueues[QueueFlags::Present] || (!surfaceFormats.empty() && ! presentModes.empty()))
         ) {
+            best = sc;
             physicalDevice = device;
-            break;
+            //break;
         }
     }
 
