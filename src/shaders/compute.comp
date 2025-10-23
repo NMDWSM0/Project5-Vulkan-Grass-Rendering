@@ -21,21 +21,6 @@ struct Blade {
     vec4 up;
 };
 
-// TODO: Add bindings to:
-// 1. Store the input blades
-// 2. Write out the culled blades
-// 3. Write the total number of blades remaining
-
-// The project is using vkCmdDrawIndirect to use a buffer as the arguments for a draw call
-// This is sort of an advanced feature so we've showed you what this buffer should look like
-//
-// layout(set = ???, binding = ???) buffer NumBlades {
-// 	  uint vertexCount;   // Write the number of blades remaining here
-// 	  uint instanceCount; // = 1
-// 	  uint firstVertex;   // = 0
-// 	  uint firstInstance; // = 0
-// } numBlades;
-
 layout(set = 2, binding = 0) buffer InBlades {
 	Blade inBlades[];
 };
@@ -55,6 +40,47 @@ bool inBounds(float value, float bounds) {
     return (value >= -bounds) && (value <= bounds);
 }
 
+const float gravityValue = 4.8f;
+const float windSpeed = 30.f;
+const float windFieldScale = 0.02f;
+const float windFieldFrenquency = 0.25f;
+
+// Noise from iq: https://www.shadertoy.com/view/Msf3WH
+vec2 hash( vec2 p ) // replace this by something better
+{
+	p = vec2( dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)) );
+	return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+}
+
+float noise( in vec2 p )
+{
+    const float K1 = 0.366025404; // (sqrt(3)-1)/2;
+    const float K2 = 0.211324865; // (3-sqrt(3))/6;
+
+	vec2  i = floor( p + (p.x+p.y)*K1 );
+    vec2  a = p - i + (i.x+i.y)*K2;
+    float m = step(a.y,a.x); 
+    vec2  o = vec2(m,1.0-m);
+    vec2  b = a - o + K2;
+	vec2  c = a - 1.0 + 2.0*K2;
+    vec3  h = max( 0.5-vec3(dot(a,a), dot(b,b), dot(c,c) ), 0.0 );
+	vec3  n = h*h*h*h*vec3( dot(a,hash(i+0.0)), dot(b,hash(i+o)), dot(c,hash(i+1.0)));
+    return dot( n, vec3(70.0) );
+}
+// End Noise
+
+vec3 windWi(vec3 pos) {
+    vec2 uv = pos.xz * windFieldScale + totalTime * windFieldFrenquency;
+    float f = 0.0;
+    mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+	f  = 0.5000*noise( uv ); uv = m*uv;
+	f += 0.2500*noise( uv ); uv = m*uv;
+	f += 0.1250*noise( uv ); uv = m*uv;
+	f += 0.0625*noise( uv ); uv = m*uv;
+    float theta = 0.5f + 0.5f * cos(totalTime);
+    return vec3(cos(theta), 0.0f, sin(theta)) * f * windSpeed;
+}
+
 void main() {
 	// Reset the number of blades to 0
 	if (gl_GlobalInvocationID.x == 0) {
@@ -65,7 +91,55 @@ void main() {
 	}
 	barrier(); // Wait till all threads reach this point
 
-    // TODO: Apply forces on every blade and update the vertices in the buffer
+    vec3 v0 = inBlades[gl_GlobalInvocationID.x].v0.xyz;
+	vec3 v1 = inBlades[gl_GlobalInvocationID.x].v1.xyz;
+	vec3 v2 = inBlades[gl_GlobalInvocationID.x].v2.xyz;
+	vec3 up = inBlades[gl_GlobalInvocationID.x].up.xyz;
+    float orientation = inBlades[gl_GlobalInvocationID.x].v0.w;
+	float height = inBlades[gl_GlobalInvocationID.x].v1.w;
+	float width = inBlades[gl_GlobalInvocationID.x].v2.w;
+	float stiffness = inBlades[gl_GlobalInvocationID.x].up.w;
+
+    vec3 t1 = normalize(vec3(-cos(orientation), 0.0, sin(orientation))); 
+    vec3 f = normalize(cross(t1, up));
+    vec3 iv2 = v0 + up * height;
+
+    // Apply forces on every blade and update the vertices in the buffer
+    // gravity
+    const vec4 gravityD = vec4(0.f, -1.f, 0.f, gravityValue);
+    vec3 gE = normalize(gravityD.xyz) * gravityD.w;
+    vec3 gF = 0.25f * length(gE) * f;
+    vec3 gravity = gE + gF;
+
+    // recovery
+    vec3 recovery = (iv2 - v2) * stiffness;
+
+    // wind
+    vec3 wi = windWi(v0);
+    float fd = 1 - abs(dot(normalize(wi), normalize(v2 - v0)));
+    float fr = dot((v2 - v0), up) / height;
+    float alignment = fd * fr;
+    vec3 wind = wi * alignment;
+
+    vec3 tv2 = (gravity + recovery + wind) * deltaTime;
+
+    // set correct v1 and v2 pos
+    v2 += tv2;   
+    v2 -= up * min(dot(up, v2 - v0), 0.f);
+
+    float lproj = length(v2 - v0 - up * dot(v2 - v0, up));
+    v1 = v0 + height * up * max(1.f - lproj / height, 0.05f * max(lproj / height, 1.f));
+
+    float L0 = distance(v0, v2);
+    float L1 = distance(v0, v1) + distance(v1, v2);
+    float L = (2.f * L0 + L1) / 3.f;  // n = 2
+    float r = height / L;
+    v1 = v0 + r * (v1 - v0);
+    v2 = v1 + r * (v2 - v1);
+
+    // write back
+    inBlades[gl_GlobalInvocationID.x].v1.xyz = v1;
+    inBlades[gl_GlobalInvocationID.x].v2.xyz = v2;
 
 	// TODO: Cull blades that are too far away or not in the camera frustum and write them
 	// to the culled blades buffer

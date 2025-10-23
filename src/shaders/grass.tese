@@ -37,7 +37,14 @@ void main() {
     vec3 c = mix(a, b, v);
     vec3 c0 = c - width * t1;
     vec3 c1 = c + width * t1;
-    vec3 t0 = normalize(b - a);
+    vec3 t0 = b - a;
+    // safe normalize
+    if (length(t0) > 0.00001f) {
+        t0 /= length(t0);
+    }
+    else {
+        t0 = normalize(inUp[0].xyz);
+    }
     vec3 n = normalize(cross(t0, t1));
 
     float t = u + 0.5 * v - u * v; // triangle shape
