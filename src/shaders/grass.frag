@@ -18,10 +18,18 @@ const vec3 lightDir = normalize(vec3(1.4, 2.5, 2.0));
 
 void main() {
     // TODO: Compute fragment color
-    vec3 color1 = vec3(0.1, 0.4, 0.1);
-    vec3 color2 = vec3(0.2, 0.9, 0.2);
+    vec3 color1 = vec3(0.25, 0.4, 0.1);
+    vec3 color2 = vec3(0.5, 0.9, 0.2);
     vec3 albedo = mix(color1, color2, uv.y);
-    vec3 diffuse = 0.5f * albedo * max(abs(dot(lightDir, nor)), 0.f); // double-sided grass
-    vec3 ambient = albedo * 0.5f;
-    outColor = vec4(diffuse + ambient, 1.0);
+    vec3 viewDir = normalize(camera.pos - pos);
+
+    vec3 diffuse = 0.5f * albedo * abs(dot(lightDir, nor)); // double-sided grass
+
+    vec3 ambient = albedo * 0.4f;
+    
+    vec3 halfDir = normalize(viewDir + lightDir);
+    float specularCoeff = 0.4f * smoothstep(0.5f, 0.8f, uv.y);
+    vec3 specular = specularCoeff * pow(abs(dot(halfDir, nor)), 32.f) * vec3(1, 1, 1);
+
+    outColor = vec4(diffuse + ambient + specular, 1.0);
 }

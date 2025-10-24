@@ -48,7 +48,7 @@ const float windFieldFrenquency = 0.25f;
 
 const float viewCullingTolerance = 0.01f;
 const int nBuckets = 8;
-const float maxDistance = 40.f;
+const float maxDistance = 64.f;
 
 // Noise from iq: https://www.shadertoy.com/view/Msf3WH
 vec2 hash( vec2 p ) // replace this by something better
