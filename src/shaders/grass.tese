@@ -9,7 +9,7 @@ layout(set = 0, binding = 0) uniform CameraBufferObject {
     vec3 pos;
 } camera;
 
-// TODO: Declare tessellation evaluation shader inputs and outputs
+// Declare tessellation evaluation shader inputs and outputs
 layout(location = 0) in vec4[] inV0;
 layout(location = 1) in vec4[] inV1;
 layout(location = 2) in vec4[] inV2;
@@ -23,7 +23,7 @@ void main() {
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
-	// TODO: Use u and v to parameterize along the grass blade and output positions for each vertex of the grass blade
+	// Use u and v to parameterize along the grass blade and output positions for each vertex of the grass blade
     vec3 v0 = inV0[0].xyz;
     vec3 v1 = inV1[0].xyz;
     vec3 v2 = inV2[0].xyz;

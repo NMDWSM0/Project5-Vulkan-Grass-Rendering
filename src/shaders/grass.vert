@@ -6,7 +6,7 @@ layout(set = 1, binding = 0) uniform ModelBufferObject {
     mat4 model;
 };
 
-// TODO: Declare vertex shader inputs and outputs
+// Declare vertex shader inputs and outputs
 layout(location = 0) in vec4 inV0;
 layout(location = 1) in vec4 inV1;
 layout(location = 2) in vec4 inV2;
@@ -22,7 +22,7 @@ out gl_PerVertex {
 };
 
 void main() {
-	// TODO: Write gl_Position and any other shader outputs
+	// Write gl_Position and any other shader outputs
     vec4 v0 = vec4(inV0.xyz, 1.f);
     gl_Position = (model * v0);
     outV0.xyz = gl_Position.xyz;

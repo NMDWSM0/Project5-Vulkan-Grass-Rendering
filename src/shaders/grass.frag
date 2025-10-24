@@ -7,7 +7,7 @@ layout(set = 0, binding = 0) uniform CameraBufferObject {
     vec3 pos;
 } camera;
 
-// TODO: Declare fragment shader inputs
+// Declare fragment shader inputs
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec3 nor;
 layout(location = 2) in vec2 uv;
@@ -17,10 +17,10 @@ layout(location = 0) out vec4 outColor;
 const vec3 lightDir = normalize(vec3(1.4, 2.5, 2.0));
 
 void main() {
-    // TODO: Compute fragment color
+    // Compute fragment color
     vec3 color1 = vec3(0.25, 0.4, 0.1);
     vec3 color2 = vec3(0.5, 0.9, 0.2);
-    vec3 albedo = mix(color1, color2, uv.y);
+    vec3 albedo = mix(color1, color2, mix(uv.y * uv.y, uv.y, 2.f * abs(uv.x - 0.5)));
     vec3 viewDir = normalize(camera.pos - pos);
 
     vec3 diffuse = 0.5f * albedo * abs(dot(lightDir, nor)); // double-sided grass
