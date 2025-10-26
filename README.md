@@ -77,3 +77,7 @@ I tested the fps with different optimizations using 2^19 number of blades, the r
 ![](img/performance2.png)
 
 From the graph we can figure out that Orientation Culling is more about "cutting out blades with alias", so it gives relatively smaller performance gain. While View Frustrum Culling and Distance Culling improves really a lot on FPS, because they culled really many of the blades outside the screen or far away. Combining all three cullings makes the program run 11 times faster than before, which is a really huge improvement! And LOD also introduces about 20% performance gain without significant visual loss.
+
+### References
+
+-   [Simplex Noise from iq](https://www.shadertoy.com/view/Msf3WH)
