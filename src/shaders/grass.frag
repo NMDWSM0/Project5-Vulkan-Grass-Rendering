@@ -20,7 +20,7 @@ void main() {
     // Compute fragment color
     vec3 color1 = vec3(0.25, 0.4, 0.1);
     vec3 color2 = vec3(0.5, 0.9, 0.2);
-    vec3 albedo = mix(color1, color2, mix(uv.y * uv.y, uv.y, 2.f * abs(uv.x - 0.5)));
+    vec3 albedo = mix(color1, color2, mix(uv.y * uv.y, uv.y, sqrt(2.f * abs(uv.x - 0.5))));
     vec3 viewDir = normalize(camera.pos - pos);
 
     vec3 diffuse = 0.5f * albedo * abs(dot(lightDir, nor)); // double-sided grass
